@@ -52,6 +52,7 @@ def ffmpeg_concat(audio: str, video: str, suffix: str = '.mp4') -> str:
     subprocess.check_output(cmd, shell=True)
     return filename
 
+
 def ffmpeg_join(videos: [str], suffix: str = '.mp4') -> str:
     """Concatinate multiple videos into one. Reutns result file path"""
     _, txtfile = mkstemp(suffix='.txt')
@@ -62,6 +63,7 @@ def ffmpeg_join(videos: [str], suffix: str = '.mp4') -> str:
     logger.debug(cmd)
     subprocess.check_output(cmd, shell=True)
     return mp4file
+
 
 def download(url: str, suffix: str = '.mp4', cache: str = False) -> str:
     """Download file via given url. Returns path to downloaded file"""

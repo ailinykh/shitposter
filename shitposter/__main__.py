@@ -7,7 +7,7 @@ from .config import DATA_DIR
 from .job import StoryJob, IgtvJob  # noqa: F401
 
 filename = 'log_{}.log'.format(datetime.today().strftime('%Y%m%d_%H%M%S'))
-logging.basicConfig(format='%(asctime)s - %(name)8s - %(levelname)7s - %(message)s', level=logging.DEBUG)
+logging.basicConfig(format='%(asctime)s - %(name)19s - %(levelname)7s - %(message)s', level=logging.DEBUG)
 logging.getLogger('urllib3').setLevel(logging.WARNING)
 logging.getLogger('telegram').setLevel(logging.WARNING)
 

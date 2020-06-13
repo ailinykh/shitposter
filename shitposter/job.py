@@ -52,11 +52,12 @@ class StoryJob(Job):
 
     def __init__(self,
                  chat_id: Any,
+                 reserve_chat_id: Any = None,
                  ts: int = 0,
                  **kwargs):
         super().__init__(kwargs['username'])
         self.ts = ts
-        self._publish_strategy = PublishStrategyAlbum(chat_id=chat_id)
+        self._publish_strategy = PublishStrategyAlbum(chat_id=chat_id, reserve_chat_id=reserve_chat_id)
 
     def execute(self):
         data = self.ig.get_story_reels_by_username(self.username)
@@ -82,7 +83,7 @@ class StoryJob(Job):
 
                 caption = '\n'.join(caption_pieces)
                 url = story['video_resources'].pop()['src'] if story['is_video'] else story['display_url']
-                self._publish_strategy.add(Media(url, caption))
+                self._publish_strategy.add(Media(url, story['is_video'], caption, story['id'], story['taken_at_timestamp']))
 
         count = len(self._publish_strategy._items)
         if count:
@@ -124,7 +125,7 @@ class IgtvJob(Job):
                 else:
                     caption = item['node']['title']
 
-                self._publish_strategy.add(Media(tv['video_url'], caption, item['node']['shortcode']))
+                self._publish_strategy.add(Media(tv['video_url'], True, caption, item['node']['shortcode']))
 
         count = len(self._publish_strategy._items)
         if count:

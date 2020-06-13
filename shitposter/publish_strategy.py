@@ -8,7 +8,7 @@ from functools import wraps
 from os import path
 from typing import Any, Dict, Callable
 
-from .helpers import download, ffprobe_get_info, ffmpeg_generate_thumb
+from .helpers import download, ffmpeg_generate_thumb, ffmpeg_join, ffprobe_get_info
 from .tgclient import TgClient
 
 
@@ -30,13 +30,15 @@ def _retry_on_error(func: Callable) -> Callable:
 
 
 class Media(object):
-    def __init__(self, url: str, caption: str = None, shortcode: str = None):
+    def __init__(self, url: str, is_video: bool, caption: str = None, shortcode: str = None, taken_at_timestamp: int = None):
         self.url = url
+        self.is_video = is_video
         self.caption = caption
         self.shortcode = shortcode
+        self.taken_at_timestamp = taken_at_timestamp
 
     def __repr__(self):
-        return '{{"url": "{}", "caption": "{}", "shortcode": "{}"}}'.format(self.url, self.caption, self.shortcode)
+        return '{{url: "{}", is_video: "{}", caption: "{}", shortcode: "{}", taken_at_timestamp: "{}"}}'.format(self.url, self.is_video, self.caption, self.shortcode, self.taken_at_timestamp)
 
 
 class PublishStrategy(object):
@@ -96,13 +98,19 @@ class PublishStrategyVideo(PublishStrategy):
 
 class PublishStrategyAlbum(PublishStrategy):
 
-    def __init__(self, **kwargs):
+    def __init__(self, reserve_chat_id: Any = None, **kwargs):
         super().__init__(kwargs['chat_id'])
+        if not reserve_chat_id:
+            self.logger.warning(f'reserve_chat_id not set. Using {self.chat_id} as reserve')
+            reserve_chat_id = self.chat_id
+        self._upload_strategy = UploadStrategy(reserve_chat_id)
 
     def publish(self) -> Dict[str, Any]:
         if not self._items:
             self.logger.warning('Nothing to publish')
             return {}
+
+        self._concatenate_videos()
 
         self.logger.debug(f'Publishing {len(self._items)} element(s)')
 
@@ -118,6 +126,48 @@ class PublishStrategyAlbum(PublishStrategy):
 
         return rv
 
+    def _concatenate_videos(self):
+        self.logger.debug(f'Trying to join videos from {len(self._items)} element(s)')
+        items = []
+        group = []
+
+        def __process_group():
+            nonlocal items, group
+            if len(group) > 1:
+                media = self._concatenate_media(group)
+                self.logger.debug(f'Appending new media {media}')
+                items.append(media)
+            elif len(group):
+                self.logger.debug(f'Appending old media {group[0]}')
+                items.append(group[0])
+            group = []
+
+        for item in self._items:
+            if item.is_video:
+                if len(group):
+                    if item.taken_at_timestamp - group[-1].taken_at_timestamp == 1:
+                        group.append(item)
+                        continue
+                __process_group()
+                group = [item]
+            else:
+                __process_group()
+                self.logger.debug(f'Media is not a video: {item}')
+                items.append(item)
+
+        __process_group()
+        self._items = items
+
+    def _concatenate_media(self, media: [Media]) -> Media:
+        self.logger.debug(f'Joining media of {len(media)} files')
+        files = []
+        for m in media:
+            file_path = download(m.url)
+            files.append(file_path)
+        file_path = ffmpeg_join(files)
+        file_id = self._upload_strategy.publish(file_path)
+        return Media(file_id, True, media[0].caption, file_id)
+
     @_retry_on_error
     def send_media_group(self, chat_id: int, items: [Media]) -> Dict[str, Any]:
         assert len(items), 'Attempt to send empty media group'
@@ -125,7 +175,7 @@ class PublishStrategyAlbum(PublishStrategy):
         for i in items:
             media.append({
                 'media': i.url,
-                'type': 'video' if '.mp4' in i.url else 'photo',
+                'type': 'video' if i.is_video else 'photo',
                 'caption': i.caption,
             })
 
@@ -155,7 +205,7 @@ class UploadStrategy(PublishStrategy):
         return UploadStrategy.__tg
 
     def publish(self, url: str, cache: str = None):
-        video_path = download(url, cache=cache)
+        video_path = url if url.startswith('/') else download(url, cache=cache)
         thumb_path = ffmpeg_generate_thumb(video_path)
 
         video_info = ffprobe_get_info(video_path)
