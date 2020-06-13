@@ -2,14 +2,14 @@ import logging
 import requests
 import time
 from abc import abstractmethod
-from config import DATA_DIR
+from .config import DATA_DIR
 from decouple import config
 from functools import wraps
 from os import path
 from typing import Any, Dict, Callable
 
-from helpers import download, ffprobe_get_info, ffmpeg_generate_thumb
-from tgclient import TgClient
+from .helpers import download, ffprobe_get_info, ffmpeg_generate_thumb
+from .tgclient import TgClient
 
 
 def _retry_on_error(func: Callable) -> Callable:

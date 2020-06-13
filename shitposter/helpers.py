@@ -44,7 +44,7 @@ def ffmpeg_generate_thumb(path: str, suffix: str = '.jpg') -> str:
     return filename
 
 
-def ffmpeg_join(audio: str, video: str, suffix: str = '.mp4') -> str:
+def ffmpeg_concat(audio: str, video: str, suffix: str = '.mp4') -> str:
     """Concatinate audio and video stream. Reutns result file path"""
     _, filename = mkstemp(suffix=suffix)
     cmd = 'ffmpeg -v error -y -i {} -i {} {}'.format(video, audio, filename)
@@ -52,6 +52,16 @@ def ffmpeg_join(audio: str, video: str, suffix: str = '.mp4') -> str:
     subprocess.check_output(cmd, shell=True)
     return filename
 
+def ffmpeg_join(videos: [str], suffix: str = '.mp4') -> str:
+    """Concatinate multiple videos into one. Reutns result file path"""
+    _, txtfile = mkstemp(suffix='.txt')
+    _, mp4file = mkstemp(suffix=suffix)
+    lines = list(map(lambda v: f'file {v}\n', videos))
+    open(txtfile, 'w').writelines(lines)
+    cmd = 'ffmpeg -v error -y -f concat -safe 0 -i {} -c copy {}'.format(txtfile, mp4file)
+    logger.debug(cmd)
+    subprocess.check_output(cmd, shell=True)
+    return mp4file
 
 def download(url: str, suffix: str = '.mp4', cache: str = False) -> str:
     """Download file via given url. Returns path to downloaded file"""

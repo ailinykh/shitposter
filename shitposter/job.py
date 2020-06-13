@@ -19,14 +19,14 @@
 
 import logging
 from abc import abstractmethod
-from config import DATA_DIR
+from .config import DATA_DIR
 from datetime import datetime
 from tinydb import TinyDB
 from typing import Any, Dict
 from os import path
 
-from igclient import IgClient
-from publish_strategy import Media, PublishStrategyAlbum, PublishStrategyVideo
+from .igclient import IgClient
+from .publish_strategy import Media, PublishStrategyAlbum, PublishStrategyVideo
 
 
 def load_cookies() -> Dict[str, Any]:

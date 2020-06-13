@@ -3,8 +3,8 @@ from datetime import datetime
 from tinydb import TinyDB
 from os import path
 
-from config import DATA_DIR
-from job import StoryJob, IgtvJob  # noqa: F401
+from .config import DATA_DIR
+from .job import StoryJob, IgtvJob  # noqa: F401
 
 filename = 'log_{}.log'.format(datetime.today().strftime('%Y%m%d_%H%M%S'))
 logging.basicConfig(format='%(asctime)s - %(name)8s - %(levelname)7s - %(message)s', level=logging.DEBUG)
