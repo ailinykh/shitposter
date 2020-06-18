@@ -83,7 +83,8 @@ class StoryJob(Job):
 
                 caption = '\n'.join(caption_pieces)
                 url = story['video_resources'].pop()['src'] if story['is_video'] else story['display_url']
-                self._publish_strategy.add(Media(url, story['is_video'], caption, story['id'], story['taken_at_timestamp']))
+                video_duration = story['video_duration'] if 'video_duration' in story else 0
+                self._publish_strategy.add(Media(url, story['is_video'], video_duration, caption, story['id'], story['taken_at_timestamp']))
 
         count = len(self._publish_strategy._items)
         if count:
@@ -125,7 +126,7 @@ class IgtvJob(Job):
                 else:
                     caption = item['node']['title']
 
-                self._publish_strategy.add(Media(tv['video_url'], True, caption, item['node']['shortcode']))
+                self._publish_strategy.add(Media(tv['video_url'], True, 0, caption, item['node']['shortcode']))
 
         count = len(self._publish_strategy._items)
         if count:

@@ -30,15 +30,16 @@ def _retry_on_error(func: Callable) -> Callable:
 
 
 class Media(object):
-    def __init__(self, url: str, is_video: bool, caption: str = None, shortcode: str = None, taken_at_timestamp: int = None):
+    def __init__(self, url: str, is_video: bool, video_duration: float = 0, caption: str = None, shortcode: str = None, taken_at_timestamp: int = None):
         self.url = url
         self.is_video = is_video
+        self.video_duration = video_duration
         self.caption = caption
         self.shortcode = shortcode
         self.taken_at_timestamp = taken_at_timestamp
 
     def __repr__(self):
-        return '{{url: "{}", is_video: "{}", caption: "{}", shortcode: "{}", taken_at_timestamp: "{}"}}'.format(self.url, self.is_video, self.caption, self.shortcode, self.taken_at_timestamp)
+        return '{{url: "{}", is_video: "{}", video_duration: "{}", caption: "{}", shortcode: "{}", taken_at_timestamp: "{}"}}'.format(self.url, self.is_video, self.video_duration, self.caption, self.shortcode, self.taken_at_timestamp)
 
 
 class PublishStrategy(object):
@@ -135,24 +136,28 @@ class PublishStrategyAlbum(PublishStrategy):
             nonlocal items, group
             if len(group) > 1:
                 media = self._concatenate_media(group)
-                self.logger.debug(f'Appending new media {media}')
+                self.logger.debug(f'Appending new media {media.shortcode} {media.video_duration} {media.taken_at_timestamp}')
                 items.append(media)
             elif len(group):
-                self.logger.debug(f'Appending old media {group[0]}')
+                self.logger.debug(f'Appending source media {group[0].shortcode} {group[0].video_duration} {group[0].taken_at_timestamp}')
                 items.append(group[0])
             group = []
 
         for item in self._items:
             if item.is_video:
                 if len(group):
-                    if item.taken_at_timestamp - group[-1].taken_at_timestamp == 1:
+                    taken_by_stories = item.taken_at_timestamp - group[-1].taken_at_timestamp == 1
+                    uploaded_by_stories = group[-1].video_duration == 15 and (item.taken_at_timestamp - group[-1].taken_at_timestamp < 300)
+                    if taken_by_stories or uploaded_by_stories:
+                        self.logger.debug(f'Appending to group {item.shortcode} {item.video_duration} {item.taken_at_timestamp}, taken_by_stories: {taken_by_stories}, uploaded_by_stories: {uploaded_by_stories}')
                         group.append(item)
                         continue
                 __process_group()
                 group = [item]
+                self.logger.debug(f'Creating new group {item.shortcode} {item.video_duration} {item.taken_at_timestamp}')
             else:
                 __process_group()
-                self.logger.debug(f'Media is not a video: {item}')
+                self.logger.debug(f'Media is not a video: {item.shortcode} {item.taken_at_timestamp}')
                 items.append(item)
 
         __process_group()
