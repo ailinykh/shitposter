@@ -171,7 +171,7 @@ class PublishStrategyAlbum(PublishStrategy):
             files.append(file_path)
         file_path = ffmpeg_join(files)
         file_id = self._upload_strategy.publish(file_path)
-        return Media(file_id, True, media[0].caption, file_id)
+        return Media(file_id, True, 0, media[0].caption)
 
     @_retry_on_error
     def send_media_group(self, chat_id: int, items: [Media]) -> Dict[str, Any]:
